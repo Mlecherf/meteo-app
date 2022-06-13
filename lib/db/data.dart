@@ -10,17 +10,17 @@ class Data {
 
   Data._init();
 
+  // ignore: non_constant_identifier_names
   Future<Database> get database async {
     if (_database != null) return _database!;
 
-    _database = await _initDB('cities.db');
+    _database = await initDB('cities.db');
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
+  Future<Database> initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 

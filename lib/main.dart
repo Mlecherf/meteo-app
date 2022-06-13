@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:meteo_app/db/data.dart';
+import 'package:meteo_app/models/openweathermap.dart';
 import 'package:meteo_app/models/daily.dart';
 import 'package:meteo_app/models/weekly.dart';
 import 'package:meteo_app/services/api_openweathermap.dart';
@@ -14,11 +16,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'App-meteo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'App-meteo'),
     );
   }
 }
@@ -33,6 +35,23 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldState = GlobalKey<ScaffoldState>();
+  late Data database;
+  late List<City> cities;
+  late int length;
+  @override
+  void initState() {
+    super.initState;
+    Data.instance.initDB("./db");
+    refreshCities();
+  }
+
+  Future refreshCities() async {
+    cities = await Data.instance.readAllCities();
+    length = await Data.instance.readAllCities().then((value) {
+      return value.length;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,77 +75,83 @@ class _MyHomePageState extends State<MyHomePage> {
                   const SizedBox(height: 30),
                   ElevatedButton(
                     onPressed: () {
-                      showDialog(
-                          context: context,
-                          builder: (context) {
-                            return Dialog(
-                                child: Container(
-                              height: 150.0,
-                              width: 360.0,
-                              child: ListView(
-                                children: <Widget>[
-                                  const SizedBox(height: 20),
-                                  const Center(
-                                    child: Text(
-                                      "Add a city",
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.bold,
-                                        fontStyle: FontStyle.italic,
+                      setState(() {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Dialog(
+                                  child: Container(
+                                height: 150.0,
+                                width: 360.0,
+                                child: ListView(
+                                  children: <Widget>[
+                                    SizedBox(height: 20),
+                                    const Center(
+                                      child: Text(
+                                        "Add a city",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  TextField(
-                                    onSubmitted: (String value) async {
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ));
-                          });
+                                    SizedBox(height: 20),
+                                    TextField(
+                                      onSubmitted: (String value) async {
+                                        setState(() {
+                                          Data.instance
+                                              .create(City(name: value));
+                                          Navigator.pop(context);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ));
+                            });
+                      });
                     },
                     child: const Text('Add a city'),
                   ),
                   const SizedBox(height: 30),
                 ]),
               ),
-              ListTile(
-                hoverColor: const Color.fromARGB(255, 135, 135, 136),
-                textColor: const Color.fromARGB(255, 255, 255, 255),
-                title: Text.rich(
-                  TextSpan(
-                    style: const TextStyle(
-                      fontSize: 17,
-                    ),
-                    children: [
-                      const WidgetSpan(
-                          child: SizedBox(
-                        width: 110,
-                      )),
-                      const TextSpan(
-                        text: 'Paris',
-                      ),
-                      const WidgetSpan(
-                          child: SizedBox(
-                        width: 70,
-                      )),
-                      WidgetSpan(
-                        child: IconButton(
-                          icon: const Icon(Icons.delete,
-                              color: Color.fromARGB(255, 246, 246, 246)),
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
+              FutureBuilder<List<City>>(
+                future: Data.instance.readAllCities(),
+                builder: (ctx, snapshot) {
+                  // Checking if future is resolved
+                  // If we got an error
+                  String data = "None";
+                  // Extracting data from snapshot object
+                  if (snapshot.hasData) {
+                    return ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        itemCount: length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            hoverColor:
+                                const Color.fromARGB(255, 135, 135, 136),
+                            textColor: const Color.fromARGB(255, 255, 255, 255),
+                            title: Text(snapshot.data![index].name),
+                            onTap: () {},
+                            leading: IconButton(
+                              icon:
+                                  const Icon(Icons.delete, color: Colors.white),
+                              onPressed: () {
+                                setState(() {
+                                  Navigator.pop(context);
+                                  Data.instance
+                                      .delete(snapshot.data![index].id!);
+                                });
+                              },
+                            ),
+                          );
+                        });
+                  }
+                  return Container();
                 },
               ),
             ],
@@ -226,17 +251,38 @@ class _MyHomePageState extends State<MyHomePage> {
                               const Spacer(),
                               Column(children: <Widget>[
                                 Text(
-                                  "Test",
-                                  //snapshot1.data!.daily![0].temp!.day
-                                  //    .toString(),
+                                  snapshot1.data!.daily![0].temp!.day
+                                      .toString(),
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 25.0),
                                 ),
                                 Text(
-                                  "Test",
-                                  //snapshot1.data!.daily![0].weather![0].main
-                                  //    .toString(),
-                                  style: TextStyle(
+                                  snapshot1.data!.daily![0].weather![0].main
+                                      .toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 15.0),
+                                )
+                              ]),
+                              const SizedBox(width: 10),
+                              Column(children: <Widget>[
+                                const Text(
+                                  "Day after tomorrow",
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 25.0),
+                                ),
+                              ]),
+                              const Spacer(),
+                              Column(children: <Widget>[
+                                Text(
+                                  snapshot1.data!.daily![1].temp!.day
+                                      .toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 25.0),
+                                ),
+                                Text(
+                                  snapshot1.data!.daily![1].weather![0].main
+                                      .toString(),
+                                  style: const TextStyle(
                                       color: Colors.white, fontSize: 15.0),
                                 )
                               ]),
@@ -253,5 +299,37 @@ class _MyHomePageState extends State<MyHomePage> {
             },
           ),
         ));
+  }
+
+  Widget buildCities() {
+    return FutureBuilder(
+      builder: (ctx, snapshot) {
+        // Checking if future is resolved
+        if (snapshot.connectionState == ConnectionState.done) {
+          // If we got an error
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                '${snapshot.error} occurred',
+                style: TextStyle(fontSize: 18),
+              ),
+            );
+
+            // if we got our data
+          } else if (snapshot.hasData) {
+            // Extracting data from snapshot object
+            final data = snapshot.data as String;
+            return Center(
+              child: Text(
+                '$data',
+                style: TextStyle(fontSize: 18),
+              ),
+            );
+          }
+        }
+        throw new Error();
+      },
+      future: Data.instance.readAllCities(),
+    );
   }
 }

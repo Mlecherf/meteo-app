@@ -38,6 +38,8 @@ class _MyHomePageState extends State<MyHomePage> {
   late Data database;
   late List<City> cities;
   late int length;
+  late String temp_city;
+
   @override
   void initState() {
     super.initState;
@@ -136,7 +138,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                 const Color.fromARGB(255, 135, 135, 136),
                             textColor: const Color.fromARGB(255, 255, 255, 255),
                             title: Text(snapshot.data![index].name),
-                            onTap: () {},
+                            onTap: () {
+                              setState(() {
+                                temp_city = snapshot.data![index].name;
+                              });
+                            },
                             leading: IconButton(
                               icon:
                                   const Icon(Icons.delete, color: Colors.white),
@@ -159,16 +165,26 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         body: Center(
           child: FutureBuilder<Daily>(
-            future: getDailyDataAPI("Brest"),
+            future: getDailyDataAPI(temp_city),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: Text("Chargement en cours..."));
               } else if (snapshot.connectionState == ConnectionState.done) {
+                AssetImage assetImage =
+                    const AssetImage("assets/chilly_night.jpg");
+                setState(() {
+                  if (snapshot.data!.weather![0].main == "Drizzle" ||
+                      snapshot.data!.weather![0].main == "Rain") {
+                    assetImage = const AssetImage("assets/rainy.jpg");
+                  } else if (snapshot.data!.weather![0].main == "Snow") {
+                    assetImage = const AssetImage("assets/snow.jpg");
+                  }
+                });
                 return Stack(children: <Widget>[
                   Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       image: DecorationImage(
-                        image: AssetImage("assets/chilly_night.jpg"),
+                        image: assetImage,
                         fit: BoxFit.fitWidth,
                       ),
                     ),
@@ -196,8 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             0),
                       ),
                       Text(
-                        "Test",
-                        //snapshot.data!.name.toString(),
+                        snapshot.data!.name.toString(),
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
